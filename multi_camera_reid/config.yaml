@@ -42,7 +42,7 @@ reid:
 
 # --- Cross-Camera Matching ---
 matching:
-  cosine_threshold: 0.52     # Cross-camera: lowered to 0.52 for lighting variations across cameras
+  cosine_threshold: 0.70     # Cross-camera: strict threshold to prevent false matches between different people
   same_camera_threshold: 0.65  # Same-camera: relaxed for occlusion recovery but strict enough to avoid merging different people (FIX 3)
   ema_alpha: 0.03             # Gallery update rate — slow/stable to prevent drift (FIX 2)
   ema_max_updates: 500        # Stop EMA updates after this many observations (FIX 2)
