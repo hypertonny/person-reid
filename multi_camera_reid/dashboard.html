@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Camera ReID Live Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0f12;
+            --card-bg: rgba(22, 26, 33, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary: #4da6ff;
+            --primary-hover: #3388dd;
+            --accent: #a370f7;
+            --success: #2ec4b6;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(77, 166, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(163, 112, 247, 0.05) 0%, transparent 40%);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background: rgba(13, 15, 18, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-section h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-section p {
+            margin: 2px 0 0 0;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .main-container {
+            flex: 1;
+            max-width: 1400px;
+            width: 100%;
+            margin: 30px auto;
+            padding: 0 20px;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .dashboard-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 25px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 18px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        /* Drag & Drop Upload Section */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .upload-box {
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .upload-box:hover {
+            border-color: var(--primary);
+            background: rgba(77, 166, 255, 0.04);
+        }
+
+        .upload-box.selected {
+            border-color: var(--success);
+            background: rgba(46, 196, 182, 0.04);
+        }
+
+        .upload-box input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+        }
+
+        .upload-box.selected .upload-icon {
+            color: var(--success);
+        }
+
+        .upload-filename {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: #0d0f12;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(77, 166, 255, 0.35);
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background-color: #2b303c;
+            color: var(--text-muted);
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        /* Real-time Progress Bar */
+        .progress-section {
+            margin-top: 25px;
+            display: none;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            text-transform: uppercase;
+        }
+
+        .status-badge.running {
+            background: rgba(77, 166, 255, 0.15);
+            color: var(--primary);
+        }
+
+        .status-badge.converting {
+            background: rgba(163, 112, 247, 0.15);
+            color: var(--accent);
+        }
+
+        .status-badge.completed {
+            background: rgba(46, 196, 182, 0.15);
+            color: var(--success);
+        }
+
+        /* Edge Case Information Card */
+        .info-card {
+            background: rgba(163, 112, 247, 0.05);
+            border: 1px solid rgba(163, 112, 247, 0.15);
+        }
+
+        .info-card h2::before {
+            background: var(--accent);
+        }
+
+        .info-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .info-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(163, 112, 247, 0.2);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .info-text h4 {
+            margin: 0 0 5px 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .info-text p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Video Output Section */
+        .video-card {
+            display: none;
+        }
+
+        .video-container {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .video-wrapper {
+            flex: 1;
+            background: rgba(13, 15, 18, 0.6);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .video-wrapper h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        video {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .video-controls {
+            margin-top: 25px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .video-controls button {
+            background-color: var(--primary);
+            color: #0d0f12;
+            border: none;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .video-controls button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* Frame details list */
+        .stats-details {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-around;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <h1>AigentHix Multi-Camera ReID</h1>
+            <p>High-Precision Spatial-Temporal Person Matching Engine</p>
+        </div>
+        <div>
+            <span id="global-status" class="status-badge">Idle</span>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <!-- Video Upload & Run Pipeline -->
+        <div class="dashboard-card">
+            <h2>Process Surveillance Feeds</h2>
+            
+            <form id="upload-form" enctype="multipart/form-data">
+                <div class="upload-grid">
+                    <div class="upload-box" id="cctv1-box">
+                        <div class="upload-icon">📹</div>
+                        <span class="upload-title">Select CCTV-1</span>
+                        <input type="file" id="cctv1-file" name="cctv1" accept="video/mp4,video/x-m4v,video/*" required>
+                        <div class="upload-filename" id="cctv1-name">No file selected</div>
+                    </div>
+                    
+                    <div class="upload-box" id="cctv2-box">
+                        <div class="upload-icon">📹</div>
+                        <span class="upload-title">Select CCTV-2</span>
+                        <input type="file" id="cctv2-file" name="cctv2" accept="video/mp4,video/x-m4v,video/*" required>
+                        <div class="upload-filename" id="cctv2-name">No file selected</div>
+                    </div>
+                </div>
+                
+                <button type="submit" id="run-btn" class="btn">🚀 Start Analysis Engine</button>
+            </form>
+
+            <div class="progress-section" id="progress-sect">
+                <div class="progress-header">
+                    <span id="current-step">Starting pipelines...</span>
+                    <span id="progress-percent">0%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="progress-fill"></div>
+                </div>
+                
+                <div class="stats-details" id="stats-det">
+                    <span id="cctv1-frames-stat">CCTV-1: 0/0</span>
+                    <span id="cctv2-frames-stat">CCTV-2: 0/0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Crowd / Edge-Case Information Section -->
+        <div class="dashboard-card info-card">
+            <h2>Edge-Case & Crowd Protections</h2>
+            
+            <div class="info-item">
+                <div class="info-number">1</div>
+                <div class="info-text">
+                    <h4>Splitting Crowds & Subsets</h4>
+                    <p>If a crowd of 5 enters CCTV-1, and only 2 walk over to CCTV-2, the engine uses the Hungarian Optimal Assignment algorithm to match the 2 returning persons visually, keeping the other 3 records in standby in case they appear later.</p>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-number">2</div>
+                <div class="info-text">
+                    <h4>Visual Consistency Gating</h4>
+                    <p>OSNet deep neural network extracts robust 512-dimensional appearance features. Clothing color, build, and textures are verified using cosine similarity to prevent mislabeling separate crowd members.</p>
+                </div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-number">3</div>
+                <div class="info-text">
+                    <h4>Spatio-Temporal Feasibility</h4>
+                    <p>Transitions are automatically validated against configured travel times between cameras. Impossible transitions (like teleportation or entering camera 2 before exiting camera 1) are gated and filtered out, with overlap tolerances for parallel-processed offline frames.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Video Outputs Card (Full Width) -->
+        <div class="dashboard-card full-width video-card" id="output-card">
+            <h2>Annotated Tracking Visualizations</h2>
+            
+            <div class="video-container">
+                <div class="video-wrapper">
+                    <h3>CCTV-1 Feed (Global IDs)</h3>
+                    <video id="vid1" muted>
+                        <source src="/outputs/annotated/cctv-1_web.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                
+                <div class="video-wrapper">
+                    <h3>CCTV-2 Feed (Global IDs)</h3>
+                    <video id="vid2" muted>
+                        <source src="/outputs/annotated/cctv-2_web.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            </div>
+
+            <div class="video-controls">
+                <button onclick="playAll()">▶ Play Synchronized</button>
+                <button onclick="pauseAll()">⏸ Pause</button>
+                <button onclick="resetAll()">🔄 Reset</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const cctv1File = document.getElementById('cctv1-file');
+        const cctv2File = document.getElementById('cctv2-file');
+        const cctv1Box = document.getElementById('cctv1-box');
+        const cctv2Box = document.getElementById('cctv2-box');
+        const cctv1Name = document.getElementById('cctv1-name');
+        const cctv2Name = document.getElementById('cctv2-name');
+        const uploadForm = document.getElementById('upload-form');
+        const runBtn = document.getElementById('run-btn');
+        
+        const progressSect = document.getElementById('progress-sect');
+        const progressFill = document.getElementById('progress-fill');
+        const progressPercent = document.getElementById('progress-percent');
+        const currentStepText = document.getElementById('current-step');
+        
+        const cctv1Stat = document.getElementById('cctv1-frames-stat');
+        const cctv2Stat = document.getElementById('cctv2-frames-stat');
+        const globalStatusBadge = document.getElementById('global-status');
+        const outputCard = document.getElementById('output-card');
+
+        // File selection visuals
+        cctv1File.addEventListener('change', () => {
+            if (cctv1File.files.length > 0) {
+                cctv1Name.innerText = cctv1File.files[0].name;
+                cctv1Box.classList.add('selected');
+            }
+        });
+
+        cctv2File.addEventListener('change', () => {
+            if (cctv2File.files.length > 0) {
+                cctv2Name.innerText = cctv2File.files[0].name;
+                cctv2Box.classList.add('selected');
+            }
+        });
+
+        // Form submission & start pipeline
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            runBtn.disabled = true;
+            runBtn.innerText = "📤 Uploading Video Files...";
+            
+            const formData = new FormData();
+            formData.append('cctv1', cctv1File.files[0]);
+            formData.append('cctv2', cctv2File.files[0]);
+            
+            try {
+                // Upload files first
+                const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!uploadRes.ok) {
+                    const errorData = await uploadRes.json();
+                    throw new Error(errorData.error || 'Failed to upload videos');
+                }
+                
+                // Start ReID processing
+                runBtn.innerText = "⚙️ Initializing Pipeline...";
+                const startRes = await fetch('/api/start', {
+                    method: 'POST'
+                });
+                
+                if (!startRes.ok) {
+                    const errorData = await startRes.json();
+                    throw new Error(errorData.error || 'Failed to start pipeline');
+                }
+                
+                progressSect.style.display = 'block';
+                outputCard.style.display = 'none';
+                pollStatus();
+                
+            } catch (err) {
+                alert(err.message);
+                runBtn.disabled = false;
+                runBtn.innerText = "🚀 Start Analysis Engine";
+            }
+        });
+
+        // Status polling loop
+        let pollInterval;
+        function pollStatus() {
+            clearInterval(pollInterval);
+            pollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch('/api/status');
+                    const data = await res.json();
+                    
+                    // Update status badge
+                    globalStatusBadge.className = 'status-badge ' + data.status;
+                    globalStatusBadge.innerText = data.status;
+                    
+                    // Update progress metrics
+                    progressFill.style.width = data.progress + '%';
+                    progressPercent.innerText = data.progress + '%';
+                    currentStepText.innerText = data.current_step;
+                    
+                    cctv1Stat.innerText = `CCTV-1: ${data.cctv1_frames}/${data.cctv1_total}`;
+                    cctv2Stat.innerText = `CCTV-2: ${data.cctv2_frames}/${data.cctv2_total}`;
+                    
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        runBtn.disabled = false;
+                        runBtn.innerText = "🚀 Start Analysis Engine";
+                        
+                        // Reload video elements with timestamps to avoid browser cache
+                        const ts = Date.now();
+                        document.getElementById('vid1').src = `/outputs/annotated/cctv-1_web.mp4?t=${ts}`;
+                        document.getElementById('vid2').src = `/outputs/annotated/cctv-2_web.mp4?t=${ts}`;
+                        
+                        outputCard.style.display = 'block';
+                        
+                        // Scroll down to show output
+                        setTimeout(() => {
+                            outputCard.scrollIntoView({ behavior: 'smooth' });
+                        }, 500);
+                        
+                    } else if (data.status === 'failed') {
+                        clearInterval(pollInterval);
+                        runBtn.disabled = false;
+                        runBtn.innerText = "🚀 Start Analysis Engine";
+                        alert("Pipeline failed: " + data.error);
+                    }
+                } catch (err) {
+                    console.error("Polling error: ", err);
+                }
+            }, 1000);
+        }
+
+        // Side-by-side synchronized video control logic
+        const v1 = document.getElementById('vid1');
+        const v2 = document.getElementById('vid2');
+
+        function playAll() {
+            v1.play();
+            v2.play();
+        }
+
+        function pauseAll() {
+            v1.pause();
+            v2.pause();
+        }
+
+        function resetAll() {
+            v1.currentTime = 0;
+            v2.currentTime = 0;
+            pauseAll();
+        }
+    </script>
+</body>
+</html>

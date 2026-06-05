@@ -1,0 +1,77 @@
+# ============================================================
+# Multi-Camera Person ReID — Configuration File
+# Phase 1: Offline video clip processing
+# Phase 2: Switch sources to rtsp:// URLs and set mode: live
+# ============================================================
+
+# --- Runtime Mode ---
+runtime:
+  mode: "offline"          # "offline" (Phase 1) | "live" (Phase 2)
+  frame_skip: 1            # Process every Nth frame (1 = every frame, 2 = every other, etc.)
+  display: false           # Show live cv2 windows (set true for Phase 2 or debug)
+  gallery_autosave_sec: 300  # Auto-save gallery every N seconds (Phase 2)
+
+# --- Camera Sources ---
+# Phase 1: Use file paths under data/clips/
+# Phase 2: Replace source with rtsp://user:pass@ip:port/stream
+cameras:
+  - id: "CCTV-1"
+    source: "data/clips/cctv1.mp4"
+    start_offset_sec: 0.0    # When does this clip start relative to shared timeline?
+
+  - id: "CCTV-2"
+    source: "data/clips/cctv2.mp4"
+    start_offset_sec: 0.0    # Adjust if CCTV-2 clip starts later than CCTV-1
+
+# --- Detection & Tracking ---
+detection:
+  yolo_model: "yolov8n.pt"   # Downloaded automatically on first run
+  confidence: 0.40            # Person detection confidence threshold
+  iou: 0.50                   # NMS IOU threshold
+  tracker: "bytetrack.yaml"   # Explicit ByteTrack selection
+  classes: [0]                # Class 0 = person only
+
+# --- ReID Feature Extraction ---
+reid:
+  model: "osnet_x1_0"                            # OSNet-x1.0 backbone
+  weights: "models/osnet_x1_0_market.pth"        # Auto-downloaded to this path
+  device: "auto"                                  # "cuda" | "cpu" | "auto"
+  embedding_dim: 512
+  input_size: [256, 128]                          # H x W for person crop
+  min_crop_height_px: 30                          # Skip tiny/noisy detections
+
+# --- Cross-Camera Matching ---
+matching:
+  cosine_threshold: 0.52     # Cross-camera: lowered to 0.52 for lighting variations across cameras
+  same_camera_threshold: 0.65  # Same-camera: relaxed for occlusion recovery but strict enough to avoid merging different people (FIX 3)
+  ema_alpha: 0.03             # Gallery update rate — slow/stable to prevent drift (FIX 2)
+  ema_max_updates: 500        # Stop EMA updates after this many observations (FIX 2)
+  use_hungarian: true         # Batch optimal assignment (recommended)
+  faiss_threshold: 1000       # Switch to FAISS index when gallery exceeds this size
+  track_cooldown_sec: 10.0    # Keep disappeared tracks in buffer for N seconds (FIX 4)
+  cooldown_cosine_threshold: 0.72  # HIGH threshold for cooldown re-linking — must not merge different people
+
+# --- Spatio-Temporal Gating ---
+# Prevents impossible cross-camera matches (e.g., teleportation)
+spatio_temporal:
+  enabled: true
+  camera_pairs:
+    - pair: ["CCTV-1", "CCTV-2"]
+      min_travel_sec: 0.0       # Allow concurrent detections (overlap handled by ST model)
+      max_travel_sec: 300.0     # 5 minutes max (generous for tuning phase)
+      mu_sec: 15.0      # Mean travel time (tune to your floor plan)
+      sigma_sec: 30.0   # Std dev — wide for initial tuning phase
+
+# --- Gallery ---
+gallery:
+  ttl_sec: 3600            # Remove entries not seen for this many seconds
+  persistence_path: "outputs/gallery_state/"
+  save_on_exit: true
+
+# --- Output ---
+output:
+  save_annotated_video: true
+  annotated_path: "outputs/annotated/"
+  log_path: "logs/reid_runtime.log"
+  log_level: "INFO"         # DEBUG | INFO | WARNING | ERROR
+  print_stats_every_n_frames: 100

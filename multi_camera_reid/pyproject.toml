@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "multi-camera-reid"
+version = "0.1.0"
+description = "Multi-camera person re-identification system using OSNet + YOLOv8 + ByteTrack"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+dependencies = [
+    # Core deep learning
+    # NOTE: torchreid is vendored — see vendor/torchreid and README for install steps
+    "torch>=2.0.1",
+    "torchvision>=0.15.2",
+    # YOLOv8 + ByteTrack tracking
+    "ultralytics>=8.0.0",
+    # Vector similarity search
+    "faiss-cpu>=1.7.4",
+    # Optimal assignment (Hungarian algorithm)
+    "scipy>=1.10.0",
+    # Image & video processing
+    "opencv-python>=4.8.0",
+    # Config parsing
+    "pyyaml>=6.0",
+    # Numerics
+    "numpy>=1.24.0",
+
+    # torchreid runtime deps (installed when vendor/torchreid is installed)
+    "tensorboard>=2.0.0",
+    "gdown>=4.0.0",
+    "h5py>=3.0.0",
+    "cython>=3.2.5",
+]
+
+[project.optional-dependencies]
+# GPU users: install this group instead of faiss-cpu
+gpu = [
+    "faiss-gpu>=1.7.2",
+]
+
+# Development / testing tools
+dev = [
+    "ipython",
+    "ipdb",
+    "rich",          # pretty terminal output for debugging
+    "pytest>=7.0",
+    "pytest-timeout",
+]
+
+[project.scripts]
+# Run as: uv run reid  (from project dir)
+reid = "orchestrator:main"
+
+[tool.uv]
+# torchreid cannot be installed from PyPI or via `uv add git+...` directly
+# because its setup.py imports the package before deps are available.
+# SOLUTION: it is vendored as a local clone.
+# Setup steps:
+#   git clone --depth 1 https://github.com/KaiyangZhou/deep-person-reid.git vendor/torchreid
+#   uv pip install tensorboard gdown --no-build-isolation
+#   uv pip install -e vendor/torchreid --no-build-isolation
+
+# Override index for torch CPU-only builds:
+# Uncomment if you want CPU-only torch (smaller download):
+# [[tool.uv.index]]
+# name = "pytorch-cpu"
+# url = "https://download.pytorch.org/whl/cpu"
+# explicit = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 60

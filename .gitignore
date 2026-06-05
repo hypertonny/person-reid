@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+models/*.pth
+models/*.pt
+outputs/
+data/clips/*.mp4
+data/clips/*.avi
+logs/
+run_debug*.log
+*.zip
+.DS_Store

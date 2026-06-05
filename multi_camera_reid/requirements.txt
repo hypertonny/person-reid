@@ -1,0 +1,28 @@
+# Multi-Camera Person Re-Identification System
+# Phase 1 dependencies
+
+# === Core CV + Deep Learning ===
+torch>=2.0.1
+torchvision>=0.15.2
+ultralytics>=8.0.0          # YOLOv8 + ByteTrack integration
+
+# === ReID Model ===
+# Option A (torchreid — pinned for stability):
+# git+https://github.com/KaiyangZhou/deep-person-reid.git
+# Option B (install via pip if available):
+torchreid
+
+# === Vector Search ===
+faiss-cpu                   # Use faiss-gpu if CUDA is available
+
+# === Matching ===
+scipy>=1.10.0               # linear_sum_assignment (Hungarian)
+
+# === Image / Video Processing ===
+opencv-python>=4.8.0        # cv2 for VideoCapture, annotation, VideoWriter
+
+# === Config ===
+pyyaml>=6.0                 # YAML config parsing
+
+# === Utilities ===
+numpy>=1.24.0
